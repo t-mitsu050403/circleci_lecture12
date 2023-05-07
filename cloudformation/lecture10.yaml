@@ -1,0 +1,477 @@
+
+#テンプレート形式の指定
+#現在は2010-09-09のみ。テンプレートファイルのお作法
+AWSTemplateFormatVersion: '2010-09-09'
+#テンプレート説明　記入すると立ち上げ時に下記文字列が入る
+Description: "raisetech lecture10 CFn Template(https://github.com/t-mitsutake/aws/blob/lecture10/lecture10.md)"
+
+Parameters:
+###　ssh接続用のキーの入力用。
+###　あらかじめ生成しているキーファイルを保存しておき、そのペア名をスタック作成時に指定する。
+  Keypair:
+    Description: Keypair input
+    Type: AWS::EC2::KeyPair::KeyName
+###　s3のバケット名を指定。
+  BucketName:
+    Description: BucketName
+    Type: String
+
+###　セキュリティグループ設定時における、外部からのソースipを指定する。基本、自分の環境IP（自宅IP）を入れる。
+  AllowedIp:
+    Description: "Although it is possible to allow all with 0.0.0.0/0. It is recommended to allow only your environment. Example: xxx.xxx.xxx.xxx/32"
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: "0.0.0.0/0"
+
+###　ec2バージョンの選択
+  ImageAMI:
+    Description: "Please enter ami for ec2. By default, as of 20230416, the latest version of the free frame that can be selected from the AWS console is set."
+    Type: String
+    Default: "ami-052c9af0c988f8bbd"
+      #20230416現在、AWSコンソールから選択できる無料枠の最新バージョン
+
+#VPC、EC2インスタンス、S3バケットなどのリソースを宣言
+Resources:
+#=================================
+# VPC
+#=================================
+  cfVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: 10.10.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+      - 
+        Key: Name
+        Value: CF-VPC
+#=================================
+# igw
+#=================================
+  cfIGW:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: CF-IGW
+  cfATGW:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      InternetGatewayId: !Ref cfIGW
+      VpcId: !Ref cfVPC
+
+
+
+#=================================
+# subnet
+#=================================
+  cfSubnet01aPub:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: 10.10.1.0/24
+      MapPublicIpOnLaunch	: 'true'
+      Tags:
+      - Key: Name
+        Value: subnet01apub
+      VpcId: !Ref cfVPC
+
+  cfSubnet01cPub:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: 10.10.2.0/24
+      MapPublicIpOnLaunch	: 'true'
+      Tags:
+      - Key: Name
+        Value: subnet01cpub
+      VpcId: !Ref cfVPC
+
+  cfSubnet01aPli:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: 10.10.11.0/24
+      MapPublicIpOnLaunch	: 'false'
+      Tags:
+      - Key: Name
+        Value: subnet01apli
+      VpcId: !Ref cfVPC
+
+  cfSubnet01cPli:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: 10.10.12.0/24
+      MapPublicIpOnLaunch	: 'false'
+      Tags:
+      - Key: Name
+        Value: subnet01cpli
+      VpcId: !Ref cfVPC
+
+#=================================
+# routetable
+#=================================
+  cfRouteTable01aPub:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: RouteTable01apub
+      VpcId: !Ref cfVPC
+
+  cfRouteTableAssociation01aPub:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref cfRouteTable01aPub
+      SubnetId: !Ref cfSubnet01aPub
+
+  cfRoute01aPub:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref cfIGW
+      RouteTableId: !Ref cfRouteTable01aPub
+
+  cfRouteTable01cPub:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: RouteTable01cpub
+      VpcId: !Ref cfVPC
+
+  cfRouteTableAssociation01cPub:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref cfRouteTable01cPub
+      SubnetId: !Ref cfSubnet01cPub
+
+  cfRoute01cPub:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref cfIGW
+      RouteTableId: !Ref cfRouteTable01cPub
+
+  cfRouteTable01aPli:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: RouteTable01apli
+      VpcId: !Ref cfVPC
+
+  cfRouteTableAssociation01aPli:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref cfRouteTable01aPli
+      SubnetId: !Ref cfSubnet01aPli
+
+  cfRouteTable01cPli:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: RouteTable01cpli
+      VpcId: !Ref cfVPC
+
+  cfRouteTableAssociation01cPli:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref cfRouteTable01cPli
+      SubnetId: !Ref cfSubnet01cPli
+
+
+
+#=================================
+# SG設定
+#=================================
+#publicec2用 SG
+  ec2cfnSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ec2cfnsg
+      VpcId: !Ref cfVPC
+      SecurityGroupIngress:
+      #ssh用
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: !Ref AllowedIp
+      #http用（nginx）
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        SourceSecurityGroupId: !Ref albcnfSecurityGroup
+      #puma用
+      - IpProtocol: tcp
+        FromPort: 3000
+        ToPort: 3000
+        CidrIp: !Ref AllowedIp
+      Tags:
+      - Key: Name
+        Value: ec2-cnf-sg
+
+#alb用 SG
+  albcnfSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: albcnfsg
+      GroupName: albcnfsg
+      VpcId: !Ref cfVPC
+      SecurityGroupIngress:
+      #http用（nginx）
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: !Ref AllowedIp
+      Tags:
+      - Key: Name
+        Value: alb-cnf-sg
+
+#RDS用 SG
+  rdscnfSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: rdscnfsg
+      GroupName: rdscnfsg
+      VpcId: !Ref cfVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref ec2cfnSecurityGroup
+      Tags:
+        - Key: Name
+          Value: rds-cnf-sg
+
+#=================================
+#RDS
+#=================================
+#サブネットグループ作成
+  RDScfnSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: "RDS_private_subnet"
+      DBSubnetGroupName: "RDS_private_subnet"
+      SubnetIds:
+      - !Ref cfSubnet01aPli
+      - !Ref cfSubnet01cPli
+      Tags:
+      -
+        Key: "Name"
+        Value: "dbsubnet"
+
+#RDSインスタンス作成
+
+  RDScfnInstance:
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBInstanceIdentifier: "cfn-rds"
+      DBInstanceClass: "db.t3.micro"
+      Engine: "mysql"
+      EngineVersion: "8.0.28"
+      MasterUsername: "admin"
+      MasterUserPassword: "adminadmin"
+      DBName: "dbcfn"
+      BackupRetentionPeriod: 0
+      MultiAZ: true
+      PubliclyAccessible: false
+      StorageType: "gp2"
+      AllocatedStorage: 20
+      StorageEncrypted: true
+      CopyTagsToSnapshot: false
+      DeletionProtection: false
+      DeleteAutomatedBackups: true
+      DBSubnetGroupName: !Ref RDScfnSubnetGroup
+      VPCSecurityGroups:
+      - !Ref rdscnfSecurityGroup
+      Tags:
+      -
+        Key: "Name"
+        Value: "cfn-rds"
+
+
+
+#=================================
+# ec2
+#=================================
+#ec2インスタンス
+  cnfEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      #20230416現在、AWSコンソールから選択できる無料枠の最新バージョン
+      #ImageId: ami-052c9af0c988f8bbd
+      ImageId: !Ref ImageAMI
+      InstanceType: t2.micro
+      SubnetId: !Ref cfSubnet01aPub
+      SecurityGroupIds:
+      - !Ref ec2cfnSecurityGroup
+      KeyName: !Ref Keypair
+      Tags:
+      -
+        Key: "Name"
+        Value: "cfn-ec2"
+
+#=================================
+# cloud front
+#=================================
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName:
+              Fn::GetAtt:
+                - Bucket
+                - RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity:
+                Fn::Sub: origin-access-identity/cloudfront/${OriginAccessIdentity}
+        Enabled: true
+        Comment:
+          Fn::Sub: ${BucketName}
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          DefaultTTL: 0
+          MaxTTL: 0
+          MinTTL: 0
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponsePagePath: /
+            ResponseCode: 200
+            ErrorCachingMinTTL: 0
+        PriceClass: PriceClass_200
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: whitelist
+            Locations:
+              - JP
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+  OriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment:
+          Fn::Sub: ${BucketName}
+
+#=================================
+# S3
+#=================================
+
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${BucketName}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Fn::Sub: ${BucketName}
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:GetObject
+            Effect: Allow
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${BucketName}/*
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${OriginAccessIdentity}
+#=================================
+# ALB
+#=================================
+
+  cnfalb:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: "cnfalb"
+      Scheme: "internet-facing"
+      Type: "application"
+      Subnets: 
+      - !Ref cfSubnet01aPub
+      - !Ref cfSubnet01cPub
+      SecurityGroups: 
+      - !Ref albcnfSecurityGroup
+      IpAddressType: "ipv4"
+      Tags:
+      -
+        Key: "Name"
+        Value: "cnfalb"
+
+# target group
+
+  cnftg:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      Name: "cnftg"
+      VpcId: !Ref cfVPC
+      Protocol: "HTTP"
+      ProtocolVersion: "HTTP1"
+      Port: 80
+      TargetType: "instance"
+      Targets: 
+      - 
+        Id: !Ref cnfEC2Instance
+        Port: 80
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/"
+      HealthCheckPort: "traffic-port"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher: 
+        HttpCode: "200"
+      Tags:
+      -
+        Key: "Name"
+        Value: "cnftg"
+
+
+#リスナー設定
+  ListenerResource:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref cnfalb
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions: 
+      - 
+        TargetGroupArn: !Ref cnftg
+        Type: "forward"
+
+#Outputsセクション設定  
+Outputs:
+  ALBOutput1:
+    Value: !GetAtt cnfalb.DNSName
+    Export:
+      Name: cfn-alb-dnsname
+  ALBOutput2:
+    Value: !GetAtt cnfalb.CanonicalHostedZoneID
+    Export:
+      Name: cfn-alb-hostzoneid
+
+
+
