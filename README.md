@@ -4,3 +4,6 @@ circleciの動作testを行うためのリポジトリです。
 git pushを行うと、cfn-lintがテンプレートの構文チェックをしてくれます。  
 
 ※circleciとgithubの事前連携が必要です。  
+
+NG箇所があった場合のチェック例  
+![image](figure/チェック例.png)  <br>
