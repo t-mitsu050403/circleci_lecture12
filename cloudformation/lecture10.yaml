@@ -27,9 +27,20 @@ Parameters:
 ###　ec2バージョンの選択
   ImageAMI:
     Description: "Please enter ami for ec2. By default, as of 20230416, the latest version of the free frame that can be selected from the AWS console is set."
-    Type: String
-    Default: "ami-052c9af0c988f8bbd"
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
       #20230416現在、AWSコンソールから選択できる無料枠の最新バージョン
+
+  dbusername:
+    Description: Specify mysql user name.
+    Type: String
+    Default: "admin"
+  dbuserpass:
+    Description: Specify mysql password.
+    Type: String
+    Default: "adminadmin"
+    NoEcho: 'true'
+
 
 #VPC、EC2インスタンス、S3バケットなどのリソースを宣言
 Resources:
@@ -70,7 +81,9 @@ Resources:
   cfSubnet01aPub:
     Type: "AWS::EC2::Subnet"
     Properties:
-      AvailabilityZone: "ap-northeast-1a"
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.10.1.0/24
       MapPublicIpOnLaunch	: 'true'
       Tags:
@@ -81,7 +94,9 @@ Resources:
   cfSubnet01cPub:
     Type: "AWS::EC2::Subnet"
     Properties:
-      AvailabilityZone: "ap-northeast-1c"
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.10.2.0/24
       MapPublicIpOnLaunch	: 'true'
       Tags:
@@ -92,7 +107,9 @@ Resources:
   cfSubnet01aPli:
     Type: "AWS::EC2::Subnet"
     Properties:
-      AvailabilityZone: "ap-northeast-1a"
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.10.11.0/24
       MapPublicIpOnLaunch	: 'false'
       Tags:
@@ -103,7 +120,9 @@ Resources:
   cfSubnet01cPli:
     Type: "AWS::EC2::Subnet"
     Properties:
-      AvailabilityZone: "ap-northeast-1c"
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 10.10.12.0/24
       MapPublicIpOnLaunch	: 'false'
       Tags:
@@ -274,8 +293,8 @@ Resources:
       DBInstanceClass: "db.t3.micro"
       Engine: "mysql"
       EngineVersion: "8.0.28"
-      MasterUsername: "admin"
-      MasterUserPassword: "adminadmin"
+      MasterUsername: !Ref dbusername
+      MasterUserPassword: !Ref dbuserpass
       DBName: "dbcfn"
       BackupRetentionPeriod: 0
       MultiAZ: true
