@@ -12,7 +12,7 @@ jobs:
           name: run cfn-lint
           command: |
             cfn-lint -i W3002 -t cfncheck/*.yaml
-  build:
+  y-lint:
     docker:
       - image: circleci/python:3.9
     steps:
@@ -22,9 +22,9 @@ jobs:
           command: pip install yamllint
       - run:
           name: Run yamllint
-          command: yamllint yamlcheck/*.yaml
+          command: yamllint yamlcheck/*.yml
 workflows:
   raisetech:
     jobs:
       - cfn-lint
-      - build
+      - y-lint
