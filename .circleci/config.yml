@@ -1,3 +1,4 @@
+---
 version: 2.1
 orbs:
   python: circleci/python@2.0.3
@@ -10,11 +11,11 @@ jobs:
       - run:
           name: run cfn-lint
           command: |
-            cfn-lint -i W3002 -t cloudformation/*.yaml
+            cfn-lint -i W3002 -t cfncheck/*.yaml
       - run:
           name: run cfn-lint
           command: |
-            cfn-lint -i W3002 -t cloudformation/*.yml
+            cfn-lint -i W3002 -t cfncheck/*.yml
   build:
     docker:
       - image: circleci/python:3.9
