@@ -25,9 +25,6 @@ jobs:
           command: pip install yamllint
       - run:
           name: Run yamllint
-          command: yamllint yamlcheck/*.yml
-      - run:
-          name: Run yamllint
           command: yamllint yamlcheck/*.yaml
 workflows:
   raisetech:
