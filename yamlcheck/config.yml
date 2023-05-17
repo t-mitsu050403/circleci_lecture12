@@ -11,6 +11,10 @@ jobs:
           name: run cfn-lint
           command: |
             cfn-lint -i W3002 -t cloudformation/*.yaml
+      - run:
+          name: run cfn-lint
+          command: |
+            cfn-lint -i W3002 -t cloudformation/*.yml
 
   build:
     docker:
@@ -21,10 +25,12 @@ jobs:
       - run:
           name: Install yamllint
           command: pip install yamllint
-
       - run:
           name: Run yamllint
           command: yamllint yamlcheck/*.yml
+      - run:
+          name: Run yamllint
+          command: yamllint yamlcheck/*.yaml
 workflows:
   raisetech:
     jobs:
