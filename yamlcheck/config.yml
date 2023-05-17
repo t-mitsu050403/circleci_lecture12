@@ -25,7 +25,6 @@ jobs:
       - run:
           name: Run yamllint
           command: yamllint yamlcheck/*.yml
-      
 workflows:
   raisetech:
     jobs:
